@@ -100,25 +100,25 @@ class Client:
                         break
                     elif isinstance(char, int) and char in (10, curses.KEY_ENTER):  # Enter key
                         break
+
+                    elif isinstance(char, str) and char in ('\x7f', '\b'):
+                        if cursor_x > 2:
+                            cursor_x -= 1
+                            self.input_window.move(0, cursor_x)
+                            self.input_window.delch()
+                            command = command[:-1]
+                    elif char == curses.KEY_LEFT:
+                        if cursor_x > 2:
+                            cursor_x -= 1
+                            self.input_window.move(0, cursor_x)
+                    elif char == curses.KEY_RIGHT:
+                        if cursor_x < 2 + len(command):
+                            cursor_x += 1
+                            self.input_window.move(0, cursor_x)
                     elif isinstance(char, str):
                         self.input_window.addstr(char)
                         command += char
                         cursor_x += 1
-                    elif isinstance(char, int):
-                        if char in (127, 8, curses.KEY_BACKSPACE):  # Backspace
-                            if cursor_x > 2:
-                                cursor_x -= 1
-                                self.input_window.move(0, cursor_x)
-                                self.input_window.delch()
-                                command = command[:-1]
-                        elif char == curses.KEY_LEFT:
-                            if cursor_x > 2:
-                                cursor_x -= 1
-                                self.input_window.move(0, cursor_x)
-                        elif char == curses.KEY_RIGHT:
-                            if cursor_x < 2 + len(command):
-                                cursor_x += 1
-                                self.input_window.move(0, cursor_x)
 
                     self.input_window.refresh()
                 except curses.error:
@@ -135,8 +135,10 @@ class Client:
                 break
             elif command == "help":
                 self.display_help()
-            else:
-                self.display_message("[Client] 未知命令，请使用 'help' 查看可用命令")
+            else:   # 添加以下行
+                self.display_message(
+                    f"[Client] 未知命令: {command}，请使用 'help' 查看可用命令")
+                self.display_message(command)
 
     def login(self, nickname):
         self.__socket.send(json.dumps({
