@@ -31,7 +31,7 @@ class Server:
         while True:
             # noinspection PyBroadException
             try:
-                buffer = connection.recv(1024).decode()
+                buffer = connection.recv(1024).decode('utf-8')
                 # 解析成json数据
                 obj = json.loads(buffer)
                 # 如果是广播指令
@@ -67,7 +67,7 @@ class Server:
                     'sender_id': user_id,
                     'sender_nickname': self.__nicknames[user_id],
                     'message': message
-                }).encode())
+                }).encode('utf-8'))
 
     def __waitForLogin(self, connection):
         # 尝试接受数据
@@ -82,7 +82,7 @@ class Server:
                 self.__nicknames.append(obj['nickname'])
                 connection.send(json.dumps({
                     'id': len(self.__connections) - 1
-                }).encode())
+                }).encode('utf-8'))
 
                 # 开辟一个新的线程
                 thread = threading.Thread(

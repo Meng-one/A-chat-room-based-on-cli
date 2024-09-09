@@ -3,6 +3,7 @@ import threading
 import json
 import curses
 from curses import wrapper
+import locale
 
 
 class Client:
@@ -16,6 +17,10 @@ class Client:
         self.chat_window = None
         self.max_lines = 0
         self.current_line = 0
+
+        # 添加以下行
+        locale.setlocale(locale.LC_ALL, '')
+        code = locale.getpreferredencoding()
         curses.start_color()
         curses.use_default_colors()
 
@@ -63,10 +68,21 @@ class Client:
             self.chat_window.scroll(1)
         self.refresh_windows()
 
+    def display_message(self, message):
+        try:
+            self.chat_window.addstr(self.current_line, 0, message)
+            if self.current_line < self.max_lines:
+                self.current_line += 1
+            else:
+                self.chat_window.scroll(1)
+            self.refresh_windows()
+        except curses.error:
+            pass  # 忽略因窗口大小导致的错误
+
     def main_loop(self):
-        curses.noecho()  # 禁用回显
-        curses.cbreak()  # 禁用行缓冲
-        self.input_window.keypad(True)  # 启用键盘映射
+        curses.noecho()
+        curses.cbreak()
+        self.input_window.keypad(True)
 
         while True:
             self.input_window.clear()
@@ -74,24 +90,39 @@ class Client:
             self.input_window.refresh()
 
             command = ""
-            cursor_x = 2  # 初始光标位置
+            cursor_x = 2
 
             while True:
-                char = self.input_window.getch()
+                try:
+                    char = self.input_window.get_wch()
 
-                if char == ord('\n'):  # Enter key
-                    break
-                elif char == 127 or char == 8 or char == curses.KEY_BACKSPACE:  # Backspace
-                    if cursor_x > 2:
-                        cursor_x -= 1
-                        self.input_window.delch(0, cursor_x)
-                        command = command[:-1]
-                elif 32 <= char <= 126:  # Printable characters
-                    self.input_window.addch(char)
-                    command += chr(char)
-                    cursor_x += 1
+                    if isinstance(char, str) and ord(char) == 10:  # Enter key
+                        break
+                    elif isinstance(char, int) and char in (10, curses.KEY_ENTER):  # Enter key
+                        break
+                    elif isinstance(char, str):
+                        self.input_window.addstr(char)
+                        command += char
+                        cursor_x += 1
+                    elif isinstance(char, int):
+                        if char in (127, 8, curses.KEY_BACKSPACE):  # Backspace
+                            if cursor_x > 2:
+                                cursor_x -= 1
+                                self.input_window.move(0, cursor_x)
+                                self.input_window.delch()
+                                command = command[:-1]
+                        elif char == curses.KEY_LEFT:
+                            if cursor_x > 2:
+                                cursor_x -= 1
+                                self.input_window.move(0, cursor_x)
+                        elif char == curses.KEY_RIGHT:
+                            if cursor_x < 2 + len(command):
+                                cursor_x += 1
+                                self.input_window.move(0, cursor_x)
 
-                self.input_window.refresh()
+                    self.input_window.refresh()
+                except curses.error:
+                    pass
 
             command = command.strip()
 
